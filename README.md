@@ -60,7 +60,8 @@ Final Outcome & Financial ROI Report
 ### 2. Installation
 ```bash
 # Clone & install dependencies
-cd Developer/DocSetuAI
+git clone https://github.com/sonurust/DocSetuAI.git
+cd DocSetuAI
 pnpm install
 ```
 
@@ -102,4 +103,7 @@ docker-compose up --build
 ---
 
 ## 📄 License
-MIT License.
+@skbhati1992 -> instagram
+@skbhati199 - Facebook
+@skbhati199 - Discord
+
