@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+coverage/
+*.log
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+.vscode/
+.idea/
+
+
+# .env.*
+TODO.md
+infrastructure/aws-apprunner.json

@@ -1,0 +1,30 @@
+{
+  "name": "docsetuai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DocSetuAI - Autonomous AI Business Operations Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "agents/*"
+  ],
+  "scripts": {
+    "build:libs": "pnpm --filter @docsetuai/types run build && pnpm --filter @docsetuai/config run build",
+    "dev:api": "pnpm run build:libs && pnpm --filter @docsetuai/api run dev",
+    "dev:web": "pnpm --filter @docsetuai/web run dev",
+    "build": "pnpm run build:libs && pnpm --filter @docsetuai/api run build && pnpm --filter @docsetuai/web run build",
+    "start:api": "pnpm --filter @docsetuai/api run start",
+    "start:web": "pnpm --filter @docsetuai/web run start",
+    "typecheck": "pnpm --filter @docsetuai/types run typecheck && pnpm --filter @docsetuai/config run typecheck && pnpm --filter @docsetuai/web run typecheck",
+    "test": "pnpm run build:libs && pnpm --filter @docsetuai/api test"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "uuid": "^14.0.2"
+  }
+}

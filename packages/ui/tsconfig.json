@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "paths": {
+      "@docsetuai/types": ["../types/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
