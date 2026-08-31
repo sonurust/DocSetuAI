@@ -19,3 +19,4 @@ Thumbs.db
 # .env.*
 TODO.md
 infrastructure/aws-apprunner.json
+docs

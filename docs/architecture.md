@@ -107,7 +107,7 @@ Report (Structured Outcome Metrics & ROI Summary)
 
 ## 4. Google Cloud Services Mapping
 
-- **Google Gemini (2.5 Flash)**: Complex goal reasoning, multi-step planning, and dynamic contextual email drafting.
+- **Google Gemini (3.6 Flash)**: Complex goal reasoning, multi-step planning, and dynamic contextual email drafting.
 - **Google Cloud Run**: Serverless container runtime hosting the web frontend and API microservices.
 - **Google Cloud Firestore**: Structured persistence for customer profiles, memory context, and immutable audit trails.
 - **Google Cloud Pub/Sub**: Asynchronous task event distribution for decoupled, fault-tolerant background agent execution.
