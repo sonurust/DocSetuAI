@@ -30,6 +30,7 @@ pnpm-debug.log*
 .env.production
 .env.staging
 !.env.example
+infrastructure/aws-apprunner.json
 
 # IDE & Editor Configurations
 .vscode/*
