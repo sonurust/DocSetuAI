@@ -131,6 +131,17 @@ class FirestoreRepository {
     }
   }
 
+  // ── AI Logs ───────────────────────────────────────────────────────────────
+
+  async saveAiLog(log: import('@docsetuai/types').AiLogEntry): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.collection('ai_logs').doc(log.id).set(log, { merge: true });
+    } catch (err) {
+      console.warn(`[Firestore] Failed to save AI log ${log.id}:`, err);
+    }
+  }
+
   // ── Seed Customers & Invoices ─────────────────────────────────────────────
 
   async seedData(customers: Customer[], invoices: Invoice[]): Promise<void> {

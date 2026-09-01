@@ -8,6 +8,7 @@
 
 import { EventEmitter } from 'events';
 import type { AiLogEntry } from '@docsetuai/types';
+import { firestoreRepo } from './firestore.repository';
 import { v4 as uuid } from 'uuid';
 
 class AiLogStore extends EventEmitter {
@@ -28,6 +29,9 @@ class AiLogStore extends EventEmitter {
     if (this.logs.length > this.maxLogs) {
       this.logs.pop();
     }
+
+    // Persist to Google Cloud Firestore
+    firestoreRepo.saveAiLog(fullEntry).catch(() => {});
 
     // Broadcast to live stream subscribers
     this.emit('ai_log', fullEntry);

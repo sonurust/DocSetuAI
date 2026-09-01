@@ -171,6 +171,14 @@ class TaskStore extends EventEmitter {
     return updated;
   }
 
+  approveAll(approvedBy = 'user'): number {
+    const pending = this.getPendingApprovals();
+    for (const a of pending) {
+      this.updateApprovalStatus(a.id, 'approved', approvedBy);
+    }
+    return pending.length;
+  }
+
   // ── Activities ────────────────────────────────────────────────────────────
 
   addActivity(activity: Activity): void {
