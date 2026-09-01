@@ -216,3 +216,27 @@ export interface LLMMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
+
+// ─── AI Telemetry & Dev Logs ──────────────────────────────────────────────────
+
+export interface AiLogEntry {
+  id: string;
+  timestamp: string;
+  agent: string;
+  action: 'generate_plan' | 'generate_payment_message' | 'chat' | 'tool_call' | 'verification' | string;
+  model: string;
+  system_instruction?: string;
+  request_payload: unknown;
+  response_payload: unknown;
+  latency_ms: number;
+  status: 'success' | 'error';
+  error?: string;
+  task_id?: string;
+}
+
+export interface AiLogsResponse {
+  success: boolean;
+  data: AiLogEntry[];
+  total: number;
+}
+

@@ -100,10 +100,10 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <div className="flex items-center justify-center gap-6 text-xs text-slate-600">
-          <span>✓ No real data required</span>
-          <span>✓ Demo mode built-in</span>
-          <span>✓ Powered by Gemini 2.5</span>
+        <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
+          <span>✓ Enterprise AI Workflows</span>
+          <span>✓ Cloud Mode &amp; Firestore</span>
+          <span>✓ Powered by Gemini 3.6 Flash</span>
         </div>
       </section>
 
@@ -161,10 +161,10 @@ export default function LandingPage() {
       <section className="border-t border-surface-800 py-20 text-center">
         <h2 className="text-2xl font-bold text-slate-100 mb-4">Ready to see it in action?</h2>
         <p className="text-slate-400 mb-8 text-sm">
-          Run the demo workflow and watch agents recover overdue payments autonomously.
+          Run the autonomous AI workflow and watch agents recover overdue payments in real-time.
         </p>
         <Link href="/tasks/new" className="btn-primary px-8 py-3 text-base">
-          Run Demo
+          Start AI Workflow
           <ArrowRight size={18} />
         </Link>
       </section>

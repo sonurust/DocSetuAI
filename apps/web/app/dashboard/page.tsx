@@ -127,13 +127,13 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Quick demo */}
+          {/* Quick action trigger */}
           <div className="mt-4 card border-brand-900/50 bg-brand-950/30">
             <p className="text-xs text-slate-400 mb-3">
-              <span className="text-brand-400 font-medium">Demo Mode</span> · Run the default workflow to see agents in action
+              <span className="text-emerald-400 font-medium">Cloud Mode · Gemini 3.6 Flash</span> · Run autonomous workflows across your business operations
             </p>
-            <Link href="/tasks/new?demo=true" className="btn-primary w-full justify-center text-xs">
-              Run Demo Workflow
+            <Link href="/tasks/new" className="btn-primary w-full justify-center text-xs">
+              Start Autonomous Workflow
               <ArrowRight size={13} />
             </Link>
           </div>

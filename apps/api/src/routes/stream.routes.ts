@@ -17,6 +17,7 @@
 
 import { Router, type Router as RouterType, type Request, type Response } from 'express';
 import { taskStore } from '../store/taskStore';
+import { aiLogStore } from '../store/aiLogStore';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 
 export const streamRouter: RouterType = Router();
@@ -65,6 +66,23 @@ taskStore.on('approval_update', ({ taskId, approval, approvals }) => {
 
 taskStore.on('activity', ({ taskId, activity, activities }) => {
   broadcastTaskUpdate(taskId, 'activity', { activity, activities });
+});
+
+// Broadcast AI log telemetry to task stream or all connected clients
+aiLogStore.on('ai_log', (logEntry) => {
+  if (logEntry.task_id) {
+    broadcastTaskUpdate(logEntry.task_id, 'ai_log', logEntry);
+  } else {
+    // Broadcast to all active task streams
+    connections.forEach((clients) => {
+      const payload = `event: ai_log\ndata: ${JSON.stringify(logEntry)}\n\n`;
+      clients.forEach((res) => {
+        try {
+          res.write(payload);
+        } catch {}
+      });
+    });
+  }
 });
 
 // GET /api/tasks/:id/stream

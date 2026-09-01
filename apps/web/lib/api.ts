@@ -96,6 +96,14 @@ export const api = {
   // Health
   health: () => request<{ status: string; runtime_mode: string }>('/health'),
 
+  // AI Telemetry & Dev Logs
+  getAiLogs: (taskId?: string, limit?: number) =>
+    request<{ success: boolean; data: import('@docsetuai/types').AiLogEntry[]; total: number }>(
+      `/api/logs/ai${taskId ? `?task_id=${taskId}` : ''}${limit ? `&limit=${limit}` : ''}`,
+    ),
+  clearAiLogs: () =>
+    request<{ success: boolean; message: string }>('/api/logs/ai/clear', { method: 'POST' }),
+
   // Real-time SSE Stream
   subscribeToTaskStream: (
     taskId: string,
@@ -105,6 +113,7 @@ export const api = {
       onExecutionUpdate?: (data: { execution: import('@docsetuai/types').AgentExecution; executions: import('@docsetuai/types').AgentExecution[] }) => void;
       onApprovalUpdate?: (data: { approval: Approval; approvals: Approval[] }) => void;
       onActivity?: (data: { activity: Activity; activities: Activity[] }) => void;
+      onAiLog?: (log: import('@docsetuai/types').AiLogEntry) => void;
       onComplete?: (data: { status: string }) => void;
       onError?: (err: Event) => void;
     },
@@ -147,6 +156,14 @@ export const api = {
       es.addEventListener('activity', (e) => {
         try {
           callbacks.onActivity?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onAiLog) {
+      es.addEventListener('ai_log', (e) => {
+        try {
+          callbacks.onAiLog?.(JSON.parse(e.data));
         } catch {}
       });
     }

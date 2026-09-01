@@ -9,6 +9,7 @@ import { activityRouter } from './routes/activity.routes';
 import { customersRouter } from './routes/customers.routes';
 import { invoicesRouter } from './routes/invoices.routes';
 import { streamRouter } from './routes/stream.routes';
+import { aiLogsRouter } from './routes/aiLogs.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { apiKeyAuth, logApiKeyStatus } from './middleware/apiKeyAuth';
@@ -46,6 +47,7 @@ app.use('/api/agents', agentsRouter);
 app.use('/api/activity', activityRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/invoices', invoicesRouter);
+app.use('/api/logs/ai', aiLogsRouter);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);

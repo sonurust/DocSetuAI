@@ -58,8 +58,8 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-surface-800">
-        <div className="text-xs text-slate-600">
-          <span className="font-mono text-brand-600">demo</span> mode · Gemini 2.5 Flash
+        <div className="text-xs text-slate-500">
+          <span className="font-mono text-emerald-400 font-semibold">cloud</span> mode · Gemini 3.6 Flash
         </div>
       </div>
     </aside>
