@@ -5,6 +5,7 @@
 
 [CmdletBinding()]
 param(
+    [string]$AwsProfile = "auth-setu",
     [string]$AwsRegion = "ap-south-1",
     [string]$AccountId = "915275803099",
     [string]$ServiceName = "docsetuai-api",
@@ -14,8 +15,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ($AwsProfile) {
+    $env:AWS_PROFILE = $AwsProfile
+}
+
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host "  DocSetuAI — AWS App Runner Deployment Pipeline" -ForegroundColor Cyan
+Write-Host "  Profile    : $AwsProfile" -ForegroundColor Yellow
 Write-Host "  Region     : $AwsRegion" -ForegroundColor Yellow
 Write-Host "  AWS Account: $AccountId" -ForegroundColor Yellow
 Write-Host "  Service    : $ServiceName" -ForegroundColor Yellow
@@ -46,27 +52,25 @@ if (-not $SkipTests) {
 
 # 3. AWS Credentials & ECR Login
 Write-Host "`n[3/5] Checking AWS credentials and authenticating with ECR ($AwsRegion)..." -ForegroundColor Green
-$callerIdentity = aws sts get-caller-identity 2>$null
+$callerIdentity = aws sts get-caller-identity --profile $AwsProfile 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $callerIdentity) {
-    Write-Host "`n⚠️  Unable to locate active AWS credentials." -ForegroundColor Yellow
-    Write-Host "To configure AWS access, please run one of the following:" -ForegroundColor Yellow
-    Write-Host "  Option A (Interactive): aws configure" -ForegroundColor White
-    Write-Host "  Option B (Environment):" -ForegroundColor White
-    Write-Host "     `$env:AWS_ACCESS_KEY_ID     = 'your_access_key_id'" -ForegroundColor White
-    Write-Host "     `$env:AWS_SECRET_ACCESS_KEY = 'your_secret_access_key'" -ForegroundColor White
-    Write-Host "     `$env:AWS_DEFAULT_REGION    = '$AwsRegion'" -ForegroundColor White
-    throw "AWS authentication credentials required. Please configure AWS credentials and re-run."
+    Write-Host "`n⚠️  Unable to authenticate with AWS profile '$AwsProfile'." -ForegroundColor Yellow
+    Write-Host "Available profiles on this machine:" -ForegroundColor Yellow
+    aws configure list-profiles
+    throw "AWS authentication failed for profile '$AwsProfile'."
 }
 
+Write-Host "  ✓ Authenticated as: $($callerIdentity | ConvertFrom-Json | Select-Object -ExpandProperty Arn)" -ForegroundColor DarkGreen
+
 $ecrRegistry = "$AccountId.dkr.ecr.$AwsRegion.amazonaws.com"
-aws ecr get-login-password --region $AwsRegion | docker login --username AWS --password-stdin $ecrRegistry
+aws ecr get-login-password --region $AwsRegion --profile $AwsProfile | docker login --username AWS --password-stdin $ecrRegistry
 if ($LASTEXITCODE -ne 0) { throw "AWS ECR authentication failed." }
 
 # Create ECR repo if it doesn't exist
-aws ecr describe-repositories --repository-names $EcrRepo --region $AwsRegion 2>$null
+aws ecr describe-repositories --repository-names $EcrRepo --region $AwsRegion --profile $AwsProfile 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  Creating new ECR repository '$EcrRepo'..." -ForegroundColor Yellow
-    aws ecr create-repository --repository-name $EcrRepo --region $AwsRegion
+    aws ecr create-repository --repository-name $EcrRepo --region $AwsRegion --profile $AwsProfile
 }
 
 # 4. Build and Push Container Image to ECR
@@ -87,16 +91,16 @@ Write-Host "  ✓ Image pushed to AWS ECR successfully." -ForegroundColor DarkGr
 Write-Host "`n[5/5] Deploying to AWS App Runner ($ServiceName)..." -ForegroundColor Green
 
 # Check if App Runner service already exists
-$existingServiceArn = aws apprunner list-services --region $AwsRegion --query "ServiceSummaryList[?ServiceName=='$ServiceName'].ServiceArn" --output text
+$existingServiceArn = aws apprunner list-services --region $AwsRegion --profile $AwsProfile --query "ServiceSummaryList[?ServiceName=='$ServiceName'].ServiceArn" --output text
 
 if ($existingServiceArn -and $existingServiceArn.Trim() -ne "") {
     Write-Host "  Updating existing App Runner service: $existingServiceArn" -ForegroundColor Yellow
-    aws apprunner start-deployment --service-arn $existingServiceArn --region $AwsRegion
+    aws apprunner start-deployment --service-arn $existingServiceArn --region $AwsRegion --profile $AwsProfile
     Write-Host "  ✓ Deployment triggered on App Runner." -ForegroundColor DarkGreen
 } else {
     Write-Host "  Creating new App Runner service from infrastructure/aws-apprunner.json..." -ForegroundColor Yellow
     if (Test-Path "infrastructure/aws-apprunner.json") {
-        aws apprunner create-service --cli-input-json file://infrastructure/aws-apprunner.json --region $AwsRegion
+        aws apprunner create-service --cli-input-json file://infrastructure/aws-apprunner.json --region $AwsRegion --profile $AwsProfile
         Write-Host "  ✓ App Runner service creation initiated." -ForegroundColor DarkGreen
     } else {
         Write-Host "  ! infrastructure/aws-apprunner.json not found." -ForegroundColor Red

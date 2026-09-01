@@ -6,7 +6,7 @@
 [CmdletBinding()]
 param(
     [switch]$Prod,
-    [string]$ApiUrl = "https://docsetuai-api-915275803099.us-central1.run.app"
+    [string]$ApiUrl = "https://docsetuai-api-z5nen6wcxq-uc.a.run.app"
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,11 +33,13 @@ pnpm --filter @docsetuai/web typecheck
 if ($LASTEXITCODE -ne 0) { throw "Web typecheck failed." }
 
 # 3. Deploy to Vercel
-Write-Host "`n[3/3] Deploying to Vercel (Project: docsetuai)..." -ForegroundColor Green
-$vercelArgs = @("--name", "docsetuai", "--yes")
+Write-Host "`n[3/3] Deploying to Vercel..." -ForegroundColor Green
+$vercelArgs = @("--yes")
 if ($Prod) {
     $vercelArgs += "--prod"
 }
+$vercelArgs += "--build-env"
+$vercelArgs += "NEXT_PUBLIC_API_URL=$ApiUrl"
 $vercelArgs += "--env"
 $vercelArgs += "NEXT_PUBLIC_API_URL=$ApiUrl"
 

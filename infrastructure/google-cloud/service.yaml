@@ -18,8 +18,6 @@ spec:
         # Startup probe timeout
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
-      # Service account with Firestore + Pub/Sub + Secret Manager access
-      serviceAccountName: docsetuai-api@docsetuai-35894.iam.gserviceaccount.com
       containerConcurrency: 80
       timeoutSeconds: 300
       containers:

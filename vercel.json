@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "name": "docsetuai",
   "framework": "nextjs",
   "buildCommand": "pnpm run build:libs && pnpm --filter @docsetuai/web build",
   "outputDirectory": "apps/web/.next",

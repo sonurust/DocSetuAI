@@ -23,12 +23,18 @@
     "release": "pwsh -File scripts/release.ps1"
   },
   "devDependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.5.4"
   },
   "engines": {
     "node": ">=18.18.0"
   },
   "dependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "uuid": "^14.0.2"
   }
 }

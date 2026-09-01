@@ -92,14 +92,16 @@ if ($LASTEXITCODE -ne 0) { throw "Docker push failed." }
 
 # 6. Deploy to Google Cloud Run
 Write-Host "`n[6/6] Deploying API service to Google Cloud Run..." -ForegroundColor Green
-gcloud run services replace infrastructure/google-cloud/service.yaml `
+gcloud run deploy docsetuai-api `
+    --image="$imageName`:latest" `
+    --platform=managed `
     --region=$Region `
-    --platform=managed
-
-gcloud run services add-iam-policy-binding docsetuai-api `
-    --member="allUsers" `
-    --role="roles/run.invoker" `
-    --region=$Region
+    --allow-unauthenticated `
+    --port=8080 `
+    --memory=1Gi `
+    --cpu=1 `
+    --set-env-vars="RUNTIME_MODE=cloud,GOOGLE_CLOUD_PROJECT=$ProjectId,GOOGLE_CLOUD_LOCATION=$Region,GEMINI_MODEL=gemini-3.6-flash,FIRESTORE_DATABASE=(default),PUBSUB_TOPIC=docsetuai-task-events" `
+    --quiet
 
 $serviceUrl = gcloud run services describe docsetuai-api --region=$Region --format="value(status.url)"
 
