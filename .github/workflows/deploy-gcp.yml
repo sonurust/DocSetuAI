@@ -14,7 +14,6 @@ jobs:
   deploy-gcp:
     name: Build & Deploy Cloud Run
     runs-on: ubuntu-latest
-    if: ${{ secrets.GCP_SA_KEY != '' }}
 
     steps:
       - name: Checkout repository

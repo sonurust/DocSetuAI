@@ -7,7 +7,6 @@ jobs:
   deploy-aws:
     name: Build & Push ECR -> App Runner
     runs-on: ubuntu-latest
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     steps:
       - name: Checkout repository
