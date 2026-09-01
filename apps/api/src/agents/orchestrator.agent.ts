@@ -1,6 +1,8 @@
 import { v4 as uuid } from 'uuid';
 import { taskStore } from '../store/taskStore';
 import { customerStore } from '../store/customerStore';
+import { aiLogStore } from '../store/aiLogStore';
+import { config } from '@docsetuai/config';
 import { getLLMAdapter } from '../llm/factory';
 import { firestoreRepo } from '../store/firestore.repository';
 import { getOverdueInvoices, getInvoice, getInvoicesByCustomer } from '../tools/billing.tools';
@@ -63,6 +65,19 @@ function finishExec(
     error,
     completed_at: completedAt,
     duration_ms: durationMs,
+  });
+
+  // Log to AI Developer Inspector stream
+  aiLogStore.log({
+    task_id: taskId,
+    agent: exec.agent,
+    action: exec.action,
+    model: config.gemini_model,
+    request_payload: exec.input ?? {},
+    response_payload: output ?? null,
+    latency_ms: durationMs,
+    status: error ? 'error' : 'success',
+    error,
   });
 }
 

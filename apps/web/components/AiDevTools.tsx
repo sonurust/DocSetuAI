@@ -35,19 +35,21 @@ export function AiDevTools() {
   const fetchLogs = useCallback(async () => {
     try {
       const res = await api.getAiLogs();
-      if (res.data) {
+      if (res && res.data) {
         setLogs(res.data);
-        if (!selectedLogId && res.data.length > 0) {
-          setSelectedLogId(res.data[0]?.id ?? null);
+        if (res.data.length > 0) {
+          setSelectedLogId((prev) => (prev && res.data.some((l) => l.id === prev) ? prev : res.data[0]!.id));
         }
       }
-    } catch {}
-  }, [selectedLogId]);
+    } catch (e) {
+      console.warn('Failed to fetch AI logs:', e);
+    }
+  }, []);
 
   useEffect(() => {
     fetchLogs();
     if (!autoRefresh) return;
-    const interval = setInterval(fetchLogs, 2500);
+    const interval = setInterval(fetchLogs, 1500);
     return () => clearInterval(interval);
   }, [fetchLogs, autoRefresh]);
 
