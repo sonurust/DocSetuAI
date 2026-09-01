@@ -6,7 +6,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
-[![Powered by Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange)](https://ai.google.dev)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Google%20Gemini%203.6%20Flash-orange)](https://ai.google.dev)
+[![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-Live-brightgreen)](https://docsetuai-api-z5nen6wcxq-uc.a.run.app/health)
+[![AWS App Runner](https://img.shields.io/badge/AWS%20App%20Runner-Deployed-amber)](https://aws.amazon.com/apprunner/)
+[![CI Status](https://github.com/sonurust/DocSetuAI/actions/workflows/ci.yml/badge.svg)](https://github.com/sonurust/DocSetuAI/actions)
+
+---
+
+## 🌐 Live Deployments & URLs
+
+| Component | Provider / Platform | Live URL / Identifier | Status |
+|-----------|-------------------|----------------------|--------|
+| **API Backend** | Google Cloud Run (`us-central1`) | [`https://docsetuai-api-z5nen6wcxq-uc.a.run.app`](https://docsetuai-api-z5nen6wcxq-uc.a.run.app/health) | 🟢 Live |
+| **API Health Check** | Google Cloud Run | [`/health`](https://docsetuai-api-z5nen6wcxq-uc.a.run.app/health) | 🟢 200 OK |
+| **Failover API** | AWS App Runner (`ap-south-1`) | `arn:aws:apprunner:ap-south-1:915275803099:service/docsetuai-api` | 🟢 Active |
+| **Web Dashboard** | Vercel Edge Global CDN | Next.js 14 Web Application | 🟢 Live |
+| **Source Code** | GitHub Repository | [`https://github.com/sonurust/DocSetuAI`](https://github.com/sonurust/DocSetuAI) | 🟢 Public |
 
 ---
 

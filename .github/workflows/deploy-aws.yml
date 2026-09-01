@@ -1,0 +1,40 @@
+name: Deploy to AWS App Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-aws:
+    name: Build & Push ECR -> App Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        if: env.AWS_ACCESS_KEY_ID != ''
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image to Amazon ECR
+        env:
+          REGISTRY: 915275803099.dkr.ecr.ap-south-1.amazonaws.com
+          REPOSITORY: docsetuai-api
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -t $REGISTRY/$REPOSITORY:${{ github.sha }} .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:${{ github.sha }}
+
+      - name: Trigger App Runner Deployment
+        run: |
+          SERVICE_ARN="arn:aws:apprunner:ap-south-1:915275803099:service/docsetuai-api/6ed04e8c5c454b0baa5c18235922cb6d"
+          aws apprunner start-deployment --service-arn $SERVICE_ARN --region ap-south-1

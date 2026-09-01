@@ -10,6 +10,7 @@ import {
   Users,
   FileText,
   BotMessageSquare,
+  Info,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/activity', label: 'Observability', icon: Activity },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/invoices', label: 'Invoices', icon: FileText },
+  { href: '/about', label: 'About & Cloud', icon: Info },
 ];
 
 export function Sidebar() {

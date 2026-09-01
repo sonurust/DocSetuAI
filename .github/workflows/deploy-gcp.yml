@@ -1,0 +1,58 @@
+name: Deploy to Google Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'agents/**'
+      - 'Dockerfile'
+      - 'infrastructure/google-cloud/**'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+
+jobs:
+  deploy-gcp:
+    name: Build & Deploy Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        if: env.GCP_SA_KEY != ''
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: docsetuai-35894
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG="gcr.io/docsetuai-35894/docsetuai-api:${{ github.sha }}"
+          LATEST_TAG="gcr.io/docsetuai-35894/docsetuai-api:latest"
+          docker build -t $IMAGE_TAG -t $LATEST_TAG .
+          docker push $IMAGE_TAG
+          docker push $LATEST_TAG
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy docsetuai-api \
+            --image=gcr.io/docsetuai-35894/docsetuai-api:latest \
+            --platform=managed \
+            --region=us-central1 \
+            --allow-unauthenticated \
+            --port=8080 \
+            --memory=1Gi \
+            --cpu=1 \
+            --set-env-vars="RUNTIME_MODE=cloud,GOOGLE_CLOUD_PROJECT=docsetuai-35894,GOOGLE_CLOUD_LOCATION=us-central1,GEMINI_MODEL=gemini-3.6-flash,FIRESTORE_DATABASE=(default),PUBSUB_TOPIC=docsetuai-task-events" \
+            --quiet
