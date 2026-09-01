@@ -1,12 +1,22 @@
 import type { Task, Approval, Activity, Customer, Invoice } from '@docsetuai/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+  if (API_KEY) {
+    headers['Authorization'] = `Bearer ${API_KEY}`;
+    headers['X-API-Key'] = API_KEY;
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
     ...options,
+    headers,
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
