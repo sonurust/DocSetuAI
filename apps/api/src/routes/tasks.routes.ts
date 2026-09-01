@@ -1,9 +1,11 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 import { taskStore } from '../store/taskStore';
-import { runTask } from '../agents/orchestrator.agent';
+import { runTask, cancelTask } from '../agents/orchestrator.agent';
+import { publishTaskEvent } from '../pubsub/publisher';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import type { ApiResponse } from '@docsetuai/types';
+import { config } from '@docsetuai/config';
 
 export const tasksRouter: RouterType = Router();
 
@@ -57,8 +59,21 @@ tasksRouter.post('/:id/run', asyncHandler(async (req, res) => {
     throw createError(`Task is already ${task.status}`, 400);
   }
 
-  // Run in background — do not await
-  runTask(task).catch((err) => console.error(`[Route] Task ${task.id} run error:`, err));
+  // In cloud mode, publish to Pub/Sub for decoupled background execution.
+  // The subscriber worker will pick it up and call runTask().
+  // In demo mode, run directly in-process.
+  if (config.runtime_mode === 'cloud') {
+    publishTaskEvent({
+      type: 'task.run',
+      task_id: task.id,
+      timestamp: new Date().toISOString(),
+    }).catch((err) => console.warn('[Route] Pub/Sub publish failed, falling back to in-process:', err));
+
+    // Fallback: also run in-process in case subscriber isn't available
+    runTask(task).catch((err) => console.error(`[Route] Task ${task.id} run error:`, err));
+  } else {
+    runTask(task).catch((err) => console.error(`[Route] Task ${task.id} run error:`, err));
+  }
 
   res.json({ success: true, data: task, message: 'Task execution started' });
 }));
@@ -72,5 +87,16 @@ tasksRouter.post('/:id/cancel', asyncHandler(async (req, res) => {
     throw createError('Task cannot be cancelled in its current state', 400);
   }
   const updated = taskStore.updateTaskStatus(id, 'cancelled');
+
+  // Signal the orchestrator's abort mechanism
+  cancelTask(id);
+
+  // Also publish cancel event to Pub/Sub for the worker
+  publishTaskEvent({
+    type: 'task.cancel',
+    task_id: id,
+    timestamp: new Date().toISOString(),
+  }).catch(() => { /* non-fatal */ });
+
   res.json({ success: true, data: updated });
 }));

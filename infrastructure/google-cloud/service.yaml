@@ -1,0 +1,81 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: docsetuai-api
+  labels:
+    app: docsetuai
+    component: api
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero when idle; max 10 instances for hackathon
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        # Startup probe timeout
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      # Service account with Firestore + Pub/Sub + Secret Manager access
+      serviceAccountName: docsetuai-api@docsetuai-35894.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: gcr.io/docsetuai-35894/docsetuai-api:latest
+          name: docsetuai-api
+          ports:
+            - name: http1
+              containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: NODE_ENV
+              value: "production"
+            - name: RUNTIME_MODE
+              value: "cloud"
+            - name: GEMINI_MODEL
+              value: "gemini-3.6-flash"
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "docsetuai-35894"
+            - name: GOOGLE_CLOUD_LOCATION
+              value: "us-central1"
+            - name: FIRESTORE_DATABASE
+              value: "(default)"
+            - name: PUBSUB_TOPIC
+              value: "docsetuai-task-events"
+            # Secrets from Google Secret Manager
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: google-api-key
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: docsetuai-api-key
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: "0.5"
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            periodSeconds: 30
+            failureThreshold: 3
+  traffic:
+    - percent: 100
+      latestRevision: true

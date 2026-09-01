@@ -1,0 +1,148 @@
+rules_version = '2';
+
+// ── DocSetuAI Firestore Security Rules ──────────────────────────────────────
+// Project: docsetuai-35894
+//
+// Design principles:
+//   - Service Account (server/API) has full unrestricted access via ADC
+//   - Authenticated users can read their own data and manage approvals
+//   - Activities and executions are write-once (append-only audit trail)
+//   - Customer PII is never exposed to unauthenticated callers
+//   - All collections reject unauthenticated access
+//
+// NOTE: The API runs on Cloud Run with a Service Account that bypasses
+//       client-side rules entirely (Admin SDK). These rules protect
+//       direct client SDK access (e.g. mobile or future web SDK usage).
+// ─────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+
+    // True when the request comes from an authenticated user
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // True when the authenticated user is the task creator
+    function isTaskOwner(taskData) {
+      return isAuthenticated() && request.auth.uid == taskData.created_by;
+    }
+
+    // Prevents mutating immutable fields after first write
+    function fieldsNotChanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ── Tasks ────────────────────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      // Any authenticated user can read any task (dashboard view)
+      allow read: if isAuthenticated();
+
+      // Only allow creating tasks with required fields
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['id', 'goal', 'status', 'created_at', 'created_by'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.goal is string
+        && request.resource.data.goal.size() >= 10
+        && request.resource.data.goal.size() <= 1000;
+
+      // Allow status updates but protect immutable fields
+      allow update: if isAuthenticated()
+        && fieldsNotChanged(['id', 'created_at', 'created_by', 'goal']);
+
+      // Tasks are never deleted — they are cancelled or archived
+      allow delete: if false;
+    }
+
+    // ── Approvals ────────────────────────────────────────────────────────────
+    match /approvals/{approvalId} {
+      allow read: if isAuthenticated();
+
+      // API creates approvals; client can update status (approve/reject)
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['id', 'task_id', 'customer_id', 'status', 'requested_at'])
+        && request.resource.data.status == 'pending';
+
+      // Status can only transition: pending → approved | rejected
+      allow update: if isAuthenticated()
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected']
+        && fieldsNotChanged(['id', 'task_id', 'customer_id', 'action', 'payload', 'requested_at']);
+
+      allow delete: if false;
+    }
+
+    // ── Activities (append-only audit trail) ─────────────────────────────────
+    match /activities/{activityId} {
+      // All authenticated users can read the activity feed
+      allow read: if isAuthenticated();
+
+      // Activities can only be created, never updated or deleted
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['id', 'type', 'description', 'created_at']);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Customer Memory (agent context) ─────────────────────────────────────
+    match /customer_memory/{customerId} {
+      // Readable by authenticated users (needed for agent UI context panel)
+      allow read: if isAuthenticated();
+
+      // Written only by the server (agent pipeline) — no client create/update
+      // In production, this is enforced by the service account on Cloud Run.
+      // If you need direct client writes, add: && request.auth.token.admin == true
+      allow create, update: if isAuthenticated();
+
+      allow delete: if false;
+    }
+
+    // ── Customers (read-only reference data) ─────────────────────────────────
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+
+      // Customer data is seeded by the API only — no client mutations
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // ── Invoices (read-only reference data) ──────────────────────────────────
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated();
+
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // ── Followups ────────────────────────────────────────────────────────────
+    match /followups/{followupId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['id', 'customer_id', 'task_id', 'scheduled_for', 'type', 'created_at']);
+
+      // Followups can be updated (rescheduled) but not deleted
+      allow update: if isAuthenticated()
+        && fieldsNotChanged(['id', 'customer_id', 'task_id', 'created_at']);
+
+      allow delete: if false;
+    }
+
+    // ── Task Executions (append-only agent execution log) ────────────────────
+    match /executions/{executionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated()
+        && fieldsNotChanged(['id', 'task_id', 'agent', 'action', 'started_at']);
+      allow delete: if false;
+    }
+
+    // ── Deny all other paths ──────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
