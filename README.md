@@ -3,84 +3,198 @@
 > **Turn business goals into completed work.**  
 > Built for the **All Things Agentic Hackathon** (Taskmaster Track).
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange)](https://ai.google.dev)
+
 ---
 
 ## 🌟 Overview
 
-**DocSetuAI** is an enterprise-grade autonomous AI operations platform powered by **Google Gemini** and **Google Cloud**. It enables businesses to declare high-level operational goals in natural language and orchestrates specialized multi-agent systems to plan, execute tool calls, solicit human approvals, and verify business outcomes.
+**DocSetuAI** is an enterprise-grade autonomous AI operations platform powered by **Google Gemini** and **Google ADK**. Businesses declare high-level goals in natural language; specialized AI agents plan, execute tool calls, request human approval, and verify business outcomes.
 
-### Flagship Demo Workflow:
-> **"Recover overdue payments from customers whose invoices are more than 7 days overdue."**
+### Flagship Demo Workflow
+> *"Recover overdue payments from customers whose invoices are more than 7 days overdue."*
+
+The system identifies overdue invoices, scores customers by priority, generates personalized Gemini-drafted reminders, gates on human approval, dispatches emails, schedules follow-ups, and produces a verified outcome report — all autonomously.
 
 ---
 
-## 🚀 Key Features
+## 🚀 Quick Start
 
-- 🧠 **Autonomous Planning**: Gemini-powered goal decomposition creating step-by-step agent execution plans.
-- 🤖 **Multi-Agent Coordination**: Specialized agents (`OrchestratorAgent`, `BillingAgent`, `CustomerAgent`, `CommunicationAgent`, `FollowupAgent`, `VerificationAgent`).
-- 🛡️ **Human-in-the-Loop Gate**: Safety gating for sensitive outbound customer communications with single or batch approval.
-- 🔍 **Closed-Loop Verification**: Independent auditing of all post-conditions before reporting completion.
-- 📊 **Real-Time Observability**: Live telemetry feed recording every tool call, decision point, and state change.
-- ⚡ **Zero-Config Demo Mode**: Pre-seeded with 50 realistic enterprise customers and 75 invoices (20 overdue) for offline review.
+```bash
+# 1. Clone & install
+git clone https://github.com/sonurust/DocSetuAI.git
+cd DocSetuAI
+pnpm install
+
+# 2. Configure (demo mode works with no API keys)
+cp .env.example .env
+
+# 3. Run API (port 4000) + Web (port 3000)
+pnpm run dev:api
+pnpm run dev:web
+```
+
+Open [http://localhost:3000](http://localhost:3000). Create a task and click **Run**.
 
 ---
 
 ## 🏗️ Architecture
 
-```text
-Natural Language Goal
-       ↓
-Gemini Reasoning & Orchestration
-       ↓
-BillingAgent (Finds Overdue Invoices)
-       ↓
-CustomerAgent (Calculates Priority & Risk)
-       ↓
-CommunicationAgent (Drafts Personalized Reminders)
-       ↓
-Human-in-the-Loop Approval Gate
-       ↓
-CommunicationAgent (Dispatches Approved Reminders)
-       ↓
-FollowupAgent (Schedules Calendar Follow-ups)
-       ↓
-VerificationAgent (Audits & Verifies Results)
-       ↓
-Final Outcome & Financial ROI Report
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Next.js Frontend (port 3000)                                   │
+│  Dashboard · Task Runner · Approval Gate · Activity Feed        │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │ REST API
+┌──────────────────────▼──────────────────────────────────────────┐
+│  Express API + Agent Host (port 4000)                           │
+│                                                                  │
+│  OrchestratorAgent                                               │
+│  ├─ BillingAgent  (find overdue invoices)                       │
+│  ├─ CustomerAgent (risk score, priority)                        │
+│  ├─ CommunicationAgent (Gemini message + send)                  │
+│  ├─ FollowupAgent (schedule escalations)                        │
+│  └─ VerificationAgent (audit + ROI report)                      │
+│                                                                  │
+│  LLM Adapter: GeminiAdapter (cloud) | MockAdapter (demo)        │
+│  Store: In-Memory (primary) + Firestore (cloud mode)            │
+└──────────────────────────────────────────────────────────────────┘
+            │ Google ADK          │ @google-cloud/firestore
+┌───────────▼───────────┐  ┌─────▼──────────────────────────────┐
+│  Google Gemini        │  │  Google Cloud Firestore             │
+│  (plan + messages)    │  │  (tasks, approvals, audit, memory)  │
+└───────────────────────┘  └─────────────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Quick Start
+## 🤖 Agent Architecture
 
-### 1. Prerequisites
-- Node.js >= 18.18.0
-- pnpm (or npm)
+| Agent | Responsibility | Tools Called |
+|-------|----------------|--------------|
+| **OrchestratorAgent** | Goal decomposition via Gemini, pipeline control, approval gate | `generate_plan`, `request_human_approval`, `verify_execution` |
+| **BillingAgent** | Overdue invoice detection and aging analysis | `get_overdue_invoices`, `get_invoice`, `get_invoices_by_customer` |
+| **CustomerAgent** | Customer profile retrieval, priority scoring (0–100) | `get_customer`, `get_customer_history`, `calculate_customer_priority` |
+| **CommunicationAgent** | Gemini-drafted personalized messages, email dispatch with retry | `generate_payment_message`, `send_email` |
+| **FollowupAgent** | Escalation scheduling by overdue threshold | `create_followup` |
+| **VerificationAgent** | Execution audit, post-condition checks, ROI summary | `verify_execution`, `save_activity` |
 
-### 2. Installation
-```bash
-# Clone & install dependencies
-git clone https://github.com/sonurust/DocSetuAI.git
-cd DocSetuAI
-pnpm install
+### Execution Flow
+
+```
+Natural-language goal → Gemini reasoning → 8-step plan
+→ BillingAgent: find overdue invoices
+→ CustomerAgent: score each customer
+→ CommunicationAgent: draft messages (Gemini)
+→ Human approval gate (blocks until resolved)
+→ CommunicationAgent: dispatch approved emails (3-retry backoff)
+→ FollowupAgent: schedule follow-ups
+→ VerificationAgent: audit + final report
 ```
 
-### 3. Environment Configuration
-```bash
-cp .env.example .env
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Backend | Node.js, Express, TypeScript |
+| AI Intelligence | Google Gemini 2.5 Flash via **Google ADK** (`@google/adk`) |
+| Cloud Persistence | Google Cloud Firestore (`@google-cloud/firestore`) |
+| In-memory State | TypeScript `Map`-based stores with Firestore dual-write |
+| Type Safety | Shared `@docsetuai/types` workspace package |
+| Testing | Jest |
+| Containerization | Docker, docker-compose |
+| Package Manager | pnpm workspaces |
+
+---
+
+## ☁️ Google Cloud Services
+
+| Service | Usage |
+|---------|-------|
+| **Google Gemini** (via ADK) | OrchestratorAgent: plan generation. CommunicationAgent: personalized message drafting. |
+| **Google ADK** | `LlmAgent + InMemoryRunner + runEphemeral` for stateless single-turn agent calls |
+| **Cloud Firestore** | Tasks, approvals, activities, customer memory — persisted in cloud mode |
+| **Cloud Run** | Deployment target for containerized API and web services |
+| **Cloud Pub/Sub** | Planned: async task event distribution (not yet wired) |
+
+---
+
+## 📋 API Endpoints
+
 ```
-*(By default `RUNTIME_MODE=demo` is configured. If you have a Google API Key, you can add `GOOGLE_API_KEY=your_key` and set `RUNTIME_MODE=cloud`).*
+GET    /health
+GET    /api/tasks              → task list + live stats
+POST   /api/tasks              body: { goal: string }
+POST   /api/tasks/:id/run      → start agent execution (async)
+POST   /api/tasks/:id/cancel
+GET    /api/tasks/:id          → task + executions + approvals + activities
 
-### 4. Running Locally
-```bash
-# Run API (Port 4000)
-pnpm run dev:api
+GET    /api/approvals          ?status=pending|approved|rejected
+POST   /api/approvals/:id/approve
+POST   /api/approvals/:id/reject
+POST   /api/approvals/approve-all   (batch — useful for demo)
 
-# Run Web UI (Port 3000)
-pnpm run dev:web
+GET    /api/agents
+GET    /api/activity           ?task_id=
+GET    /api/customers
+GET    /api/invoices           ?status=
+GET    /api/invoices/overdue   ?min_days=7
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Full schema: [docs/api-reference.md](docs/api-reference.md)
+
+---
+
+## 🗃️ Data Model
+
+```
+Customer  { id, name, email, company, phone, segment, risk_score, preferred_channel, ... }
+Invoice   { id, customer_id, amount, currency, due_date, status, days_overdue, ... }
+Task      { id, goal, status, plan: PlanStep[], result: TaskResult, ... }
+Approval  { id, task_id, payload: { customer, invoice, message, channel }, status, ... }
+Activity  { id, task_id, type, description, metadata, created_at }
+CustomerMemory { customer_id, interactions[], preferred_channel, risk_level, notes[] }
+```
+
+---
+
+## 🌱 Demo Mode
+
+No Google account required.
+
+- `RUNTIME_MODE=demo` (default in `.env.example`)
+- 50 realistic customers + 75 invoices (20 overdue) seeded on startup
+- Gemini replaced by deterministic `MockLLMAdapter` with tone-aware templates
+- `sendEmail()` runs retry logic but doesn't make real network calls unless SMTP/SendGrid is configured
+
+**To run the demo:**
+1. Start API + web (`pnpm run dev:api && pnpm run dev:web`)
+2. Go to Task Creation
+3. Type: *"Recover overdue payments from customers whose invoices are more than 7 days overdue."*
+4. Click **Run Task**
+5. Watch the execution timeline update live
+6. Go to **Approvals** and approve/reject messages
+7. See the final verification report
+
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RUNTIME_MODE` | `demo` | `demo` = offline mode; `cloud` = Gemini + Firestore |
+| `GOOGLE_API_KEY` | — | Gemini API key (get from [Google AI Studio](https://aistudio.google.com)) |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model name |
+| `GOOGLE_CLOUD_PROJECT` | — | GCP project ID for Firestore |
+| `FIRESTORE_DATABASE` | `(default)` | Firestore database name |
+| `PORT` | `4000` | API server port |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | Web → API base URL |
 
 ---
 
@@ -90,20 +204,64 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 pnpm test
 ```
 
+Tests cover:
+- Task store lifecycle (create, update, status transitions)
+- Approval flow (approve, reject, batch, pending filter)
+- Stats calculation
+- Tool validation
+
 ---
 
-## 🐳 Docker Deployment
+## 🐳 Docker
 
 ```bash
 docker-compose up --build
+# Web: http://localhost:3000
+# API: http://localhost:4000
 ```
-- Web Application: `http://localhost:3000`
-- API Backend: `http://localhost:4000`
+
+---
+
+## 📄 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/architecture.md](docs/architecture.md) | System architecture + Mermaid diagrams |
+| [docs/api-reference.md](docs/api-reference.md) | Full REST API contract |
+| [docs/demo-script.md](docs/demo-script.md) | 3–4 min demo video script |
+| [docs/deployment.md](docs/deployment.md) | Local, Docker, Cloud Run deploy guide |
+| [docs/hackathon-submission.md](docs/hackathon-submission.md) | Hackathon submission documentation |
+| [docs/test-scenarios.md](docs/test-scenarios.md) | QA test scenarios |
+
+---
+
+## 🔐 Security
+
+- No secrets in Git — `.env` is gitignored
+- All secrets via environment variables
+- Server-side only API keys (Gemini, Firestore)
+- Input validation via `zod` on all POST endpoints
+- Safe error messages (no stack traces exposed to clients)
+- Human-in-the-loop gate for all customer-facing actions
+
+---
+
+## 📈 Future Roadmap
+
+- [ ] Pub/Sub async task dispatch (decouple orchestrator from HTTP request)
+- [ ] Server-Sent Events for real-time frontend updates without polling
+- [ ] Auth middleware (JWT / API key)
+- [ ] Real email dispatch (SendGrid / AWS SES integration)
+- [ ] SMS and WhatsApp channels (Twilio)
+- [ ] Customer memory used in message generation (prior interaction context)
+- [ ] Agent cancellation with `AbortController`
+- [ ] Cloud Run infrastructure configs (`service.yaml`, `cloudbuild.yaml`)
+- [ ] Playwright E2E tests for approval flow
 
 ---
 
 ## 📄 License
-@skbhati1992 -> instagram
-@skbhati199 - Facebook
-@skbhati199 - Discord
 
+MIT — see [LICENSE](LICENSE)
+
+**Author:** @skbhati1992 (Instagram) · @skbhati199 (Facebook, Discord)
