@@ -16,7 +16,11 @@
     "start:api": "pnpm --filter @docsetuai/api run start",
     "start:web": "pnpm --filter @docsetuai/web run start",
     "typecheck": "pnpm --filter @docsetuai/types run typecheck && pnpm --filter @docsetuai/config run typecheck && pnpm --filter @docsetuai/api run typecheck && pnpm --filter @docsetuai/web run typecheck",
-    "test": "pnpm run build:libs && pnpm --filter @docsetuai/api test"
+    "test": "pnpm run build:libs && pnpm --filter @docsetuai/api test",
+    "deploy:gcp": "pwsh -File scripts/deploy-gcp.ps1",
+    "deploy:aws": "pwsh -File scripts/deploy-aws.ps1",
+    "deploy:vercel": "pwsh -File scripts/deploy-vercel.ps1",
+    "release": "pwsh -File scripts/release.ps1"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
