@@ -17,10 +17,10 @@
 
 | Component | Provider / Platform | Live URL / Identifier | Status |
 |-----------|-------------------|----------------------|--------|
+| **Web Dashboard (Live App)** | Vercel Edge Global CDN | [`https://docsetuai.vercel.app`](https://docsetuai.vercel.app) | 🟢 Live |
 | **API Backend** | Google Cloud Run (`us-central1`) | [`https://docsetuai-api-z5nen6wcxq-uc.a.run.app`](https://docsetuai-api-z5nen6wcxq-uc.a.run.app/health) | 🟢 Live |
 | **API Health Check** | Google Cloud Run | [`/health`](https://docsetuai-api-z5nen6wcxq-uc.a.run.app/health) | 🟢 200 OK |
 | **Failover API** | AWS App Runner (`ap-south-1`) | `arn:aws:apprunner:ap-south-1:915275803099:service/docsetuai-api` | 🟢 Active |
-| **Web Dashboard** | Vercel Edge Global CDN | Next.js 14 Web Application | 🟢 Live |
 | **Source Code** | GitHub Repository | [`https://github.com/sonurust/DocSetuAI`](https://github.com/sonurust/DocSetuAI) | 🟢 Public |
 
 ---

@@ -133,7 +133,7 @@ export default function AboutPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Zap size={18} className="text-purple-400" />
-                  <span className="font-semibold text-sm">Vercel Edge</span>
+                  <span className="font-semibold text-sm">Vercel Edge (Live App)</span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">
                   Global CDN
@@ -144,12 +144,12 @@ export default function AboutPage() {
               </p>
               <div className="pt-2 border-t border-surface-800/80 flex items-center justify-between">
                 <a
-                  href="https://github.com/sonurust/DocSetuAI"
+                  href="https://docsetuai.vercel.app"
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs text-brand-400 hover:underline flex items-center gap-1 font-mono"
                 >
-                  GitHub Repository <ExternalLink size={11} />
+                  docsetuai.vercel.app <ExternalLink size={11} />
                 </a>
                 <span className="text-[10px] text-emerald-400 font-mono">LIVE</span>
               </div>
