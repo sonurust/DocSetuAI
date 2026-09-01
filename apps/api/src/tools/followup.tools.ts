@@ -1,3 +1,5 @@
+import { firestoreRepo } from '../store/firestore.repository';
+
 export interface Followup {
   id: string;
   customer_id: string;
@@ -8,6 +10,7 @@ export interface Followup {
   created_at: string;
 }
 
+// In-memory primary store — Firestore is async secondary (cloud mode)
 const followups: Map<string, Followup> = new Map();
 
 export function createFollowup(params: {
@@ -31,9 +34,19 @@ export function createFollowup(params: {
   };
 
   followups.set(id, followup);
+
+  // Persist to Firestore (non-blocking; graceful no-op in demo mode)
+  firestoreRepo.saveFollowup(followup).catch((err) =>
+    console.warn(`[FollowupTools] Firestore persist failed for ${id}:`, err),
+  );
+
   return followup;
 }
 
 export function getFollowupsByTask(taskId: string): Followup[] {
   return Array.from(followups.values()).filter((f) => f.task_id === taskId);
+}
+
+export function getAllFollowups(): Followup[] {
+  return Array.from(followups.values());
 }

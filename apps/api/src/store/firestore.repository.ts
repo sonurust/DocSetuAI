@@ -8,6 +8,7 @@ import type {
   Activity,
   CustomerMemory,
 } from '@docsetuai/types';
+import type { Followup } from '../tools/followup.tools';
 
 class FirestoreRepository {
   private db: Firestore | null = null;
@@ -102,6 +103,31 @@ class FirestoreRepository {
     } catch (err) {
       console.warn(`[Firestore] Failed to get memory for ${customerId}:`, err);
       return null;
+    }
+  }
+
+  // ── Followups ─────────────────────────────────────────────────────────────
+
+  async saveFollowup(followup: Followup): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.collection('followups').doc(followup.id).set(followup, { merge: true });
+    } catch (err) {
+      console.warn(`[Firestore] Failed to save followup ${followup.id}:`, err);
+    }
+  }
+
+  async getFollowupsByTask(taskId: string): Promise<Followup[]> {
+    if (!this.db) return [];
+    try {
+      const snap = await this.db
+        .collection('followups')
+        .where('task_id', '==', taskId)
+        .get();
+      return snap.docs.map((d) => d.data() as Followup);
+    } catch (err) {
+      console.warn(`[Firestore] Failed to get followups for task ${taskId}:`, err);
+      return [];
     }
   }
 

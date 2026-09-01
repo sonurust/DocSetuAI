@@ -2,9 +2,11 @@ import { v4 as uuid } from 'uuid';
 import { taskStore } from '../store/taskStore';
 import { customerStore } from '../store/customerStore';
 import { getLLMAdapter } from '../llm/factory';
+import { firestoreRepo } from '../store/firestore.repository';
 import { getOverdueInvoices, getInvoice, getInvoicesByCustomer } from '../tools/billing.tools';
 import { getCustomer, getCustomerHistory, calculateCustomerPriority } from '../tools/customer.tools';
 import { sendEmail } from '../tools/communication.tools';
+import { createFollowup } from '../tools/followup.tools';
 import type {
   Task,
   AgentExecution,
@@ -13,10 +15,6 @@ import type {
   Activity,
   TaskResult,
 } from '@docsetuai/types';
-
-// ── Agent class helpers (inline until workspace packages are linked) ──────────
-// These mirror the logic in agents/* — the packages act as the source of truth
-// for consumers outside apps/api once they are published or workspace-linked.
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -78,24 +76,23 @@ function markStep(taskId: string, stepId: string, status: 'running' | 'completed
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ── Agent instances ───────────────────────────────────────────────────────────
+// ── Cancellation registry ──────────────────────────────────────────────────────
 
-// Agent helpers — thin wrappers around tool functions
-const billingOps = { findOverdueInvoices: getOverdueInvoices };
-const customerOps = { getCustomer, getCustomerHistory, calculatePriority: calculateCustomerPriority };
-const followups = new Map<string, { customerId: string; taskId: string; scheduledFor: string; type: string }>();
+const cancelledTasks: Set<string> = new Set();
 
-function autoScheduleFollowup(customerId: string, taskId: string, daysOverdue: number, invoiceId: string) {
-  const id = `FUP-${Date.now().toString(36).toUpperCase()}`;
-  const daysFromNow = daysOverdue > 20 ? 3 : 7;
-  const type = daysOverdue > 20 ? 'escalation' : 'payment_reminder';
-  followups.set(id, {
-    customerId,
-    taskId,
-    scheduledFor: new Date(Date.now() + daysFromNow * 86_400_000).toISOString(),
-    type,
-  });
-  return id;
+export function cancelTask(taskId: string): void {
+  cancelledTasks.add(taskId);
+}
+
+function isCancelled(taskId: string): boolean {
+  return cancelledTasks.has(taskId);
+}
+
+// Guard: throws if the task was cancelled mid-execution
+function assertNotCancelled(taskId: string): void {
+  if (isCancelled(taskId)) {
+    throw new Error(`Task ${taskId} was cancelled`);
+  }
 }
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
@@ -104,7 +101,8 @@ export async function runTask(task: Task): Promise<void> {
   const taskId = task.id;
   const llm = getLLMAdapter();
 
-  // Communication is delegated to LLM adapter + sendEmail tool directly
+  // Cleanup any stale cancel flag from a previous run
+  cancelledTasks.delete(taskId);
 
   try {
     // ── Phase 1: Planning ──────────────────────────────────────────────────
@@ -120,6 +118,8 @@ export async function runTask(task: Task): Promise<void> {
     });
     await delay(500);
 
+    assertNotCancelled(taskId);
+
     // ── Phase 2: BillingAgent — find overdue invoices ──────────────────────
     const minDays = task.goal.toLowerCase().includes('7 day') ? 7
       : task.goal.toLowerCase().includes('14 day') ? 14
@@ -133,7 +133,7 @@ export async function runTask(task: Task): Promise<void> {
 
     const billingExec = startExec(taskId, 'BillingAgent', 'find_overdue_invoices', { min_days_overdue: minDays });
     await delay(600);
-    const overdueInvoices = billingOps.findOverdueInvoices(minDays);
+    const overdueInvoices = getOverdueInvoices(minDays);
     finishExec(taskId, billingExec, { count: overdueInvoices.length, min_days: minDays });
     if (step0) markStep(taskId, step0.id, 'completed');
     logActivity(taskId, 'tool_called', `BillingAgent → find_overdue_invoices(): ${overdueInvoices.length} invoices found`, {
@@ -159,6 +159,8 @@ export async function runTask(task: Task): Promise<void> {
       return;
     }
 
+    assertNotCancelled(taskId);
+
     // ── Phase 3: CustomerAgent — profile & score each customer ─────────────
     const step1 = plan.steps[1];
     const step2 = plan.steps[2];
@@ -171,19 +173,38 @@ export async function runTask(task: Task): Promise<void> {
       customer: NonNullable<ReturnType<typeof getCustomer>>;
       invoice: (typeof overdueInvoices)[0];
       priority: number;
+      previousInteractions: string[];
     }
 
     const profiles: CustomerProfileInternal[] = [];
 
     for (const invoice of overdueInvoices) {
+      assertNotCancelled(taskId);
+
       const custExec = startExec(taskId, 'CustomerAgent', 'build_customer_profile', { customer_id: invoice.customer_id });
       await delay(80);
-      const customer = customerOps.getCustomer(invoice.customer_id);
+      const customer = getCustomer(invoice.customer_id);
       if (!customer) { finishExec(taskId, custExec, undefined, 'Customer not found'); continue; }
-      const history = customerOps.getCustomerHistory(customer.id);
-      const priority = customerOps.calculatePriority(customer.id);
-      finishExec(taskId, custExec, { name: customer.name, priority, outstanding: history.total_outstanding });
-      profiles.push({ customer, invoice, priority });
+
+      const history = getCustomerHistory(customer.id);
+      const priority = calculateCustomerPriority(customer.id);
+
+      // ── Persistent memory: load prior interactions from Firestore ──────
+      let previousInteractions: string[] = [];
+      const memory = await firestoreRepo.getCustomerMemory(customer.id);
+      if (memory?.interactions?.length) {
+        previousInteractions = memory.interactions
+          .slice(-3) // last 3 interactions
+          .map((i) => `${i.date}: ${i.description}${i.outcome ? ` (${i.outcome})` : ''}`);
+      }
+
+      finishExec(taskId, custExec, {
+        name: customer.name,
+        priority,
+        outstanding: history.total_outstanding,
+        has_memory: previousInteractions.length > 0,
+      });
+      profiles.push({ customer, invoice, priority, previousInteractions });
     }
 
     if (step1) markStep(taskId, step1.id, 'completed');
@@ -193,6 +214,8 @@ export async function runTask(task: Task): Promise<void> {
 
     // Sort by priority (highest first)
     profiles.sort((a, b) => b.priority - a.priority);
+
+    assertNotCancelled(taskId);
 
     // ── Phase 4: CommunicationAgent — generate personalised messages ───────
     const step4 = plan.steps[4];
@@ -206,14 +229,19 @@ export async function runTask(task: Task): Promise<void> {
     }> = [];
 
     for (const profile of profiles) {
+      assertNotCancelled(taskId);
+
       const daysOverdue = profile.invoice.days_overdue;
       const tone = daysOverdue <= 7 ? 'gentle' : daysOverdue <= 14 ? 'firm' : daysOverdue <= 30 ? 'urgent' : 'escalation';
       const msgExec = startExec(taskId, 'CommunicationAgent', 'generate_payment_message', {
         customer_id: profile.customer.id,
         invoice_id: profile.invoice.id,
         tone,
+        has_prior_interactions: profile.previousInteractions.length > 0,
       });
       await delay(150);
+
+      // Pass customer memory (prior interactions) to Gemini for contextual drafting
       const message = await llm.generatePaymentMessage({
         customerName: profile.customer.name,
         company: profile.customer.company,
@@ -221,6 +249,7 @@ export async function runTask(task: Task): Promise<void> {
         amount: profile.invoice.amount,
         currency: profile.invoice.currency,
         daysOverdue: profile.invoice.days_overdue,
+        previousInteractions: profile.previousInteractions,
       });
       finishExec(taskId, msgExec, { message_length: message.length, tone });
 
@@ -265,6 +294,12 @@ export async function runTask(task: Task): Promise<void> {
     const pollInterval = 2000;
     let waited = 0;
     while (waited < maxWaitMs) {
+      // Respect cancellation even during the approval wait
+      if (isCancelled(taskId)) {
+        taskStore.updateTaskStatus(taskId, 'cancelled');
+        logActivity(taskId, 'task_failed', 'Task cancelled during approval gate');
+        return;
+      }
       const pendingCount = taskStore.getApprovalsByTask(taskId).filter((a) => a.status === 'pending').length;
       if (pendingCount === 0) break;
       await delay(pollInterval);
@@ -288,6 +323,8 @@ export async function runTask(task: Task): Promise<void> {
     let sendFailures = 0;
 
     for (const approval of approved) {
+      assertNotCancelled(taskId);
+
       const sendExec = startExec(taskId, 'CommunicationAgent', 'send_email', {
         customer_id: approval.customer_id,
         email: approval.payload.customer.email,
@@ -304,6 +341,20 @@ export async function runTask(task: Task): Promise<void> {
         logActivity(taskId, 'email_sent', `Email sent to ${approval.payload.customer.company}`, {
           customer_id: approval.customer_id,
           invoice_id: approval.payload.invoice.id,
+        });
+
+        // Save interaction to customer memory
+        await firestoreRepo.saveCustomerMemory({
+          customer_id: approval.customer_id,
+          interactions: [{
+            date: new Date().toISOString().split('T')[0] ?? '',
+            type: 'payment_reminder',
+            description: `Payment reminder sent for invoice ${approval.payload.invoice.id} (₹${approval.payload.invoice.amount.toLocaleString('en-IN')})`,
+            outcome: 'sent',
+          }],
+          preferred_channel: 'email',
+          risk_level: 'medium',
+          notes: [],
         });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -325,9 +376,26 @@ export async function runTask(task: Task): Promise<void> {
 
     let followupCount = 0;
     for (const { customer, invoice } of profiles) {
-      autoScheduleFollowup(customer.id, taskId, invoice.days_overdue, invoice.id);
+      assertNotCancelled(taskId);
+
+      const daysFromNow = invoice.days_overdue > 20 ? 3 : 7;
+      const type: 'payment_reminder' | 'escalation' = invoice.days_overdue > 20 ? 'escalation' : 'payment_reminder';
+
+      // Use the real tool (persists to Firestore)
+      createFollowup({
+        customerId: customer.id,
+        taskId,
+        daysFromNow,
+        type,
+        notes: `Auto-scheduled after invoice ${invoice.id} reminder. Days overdue: ${invoice.days_overdue}`,
+      });
       followupCount++;
-      logActivity(taskId, 'followup_created', `Follow-up scheduled for ${customer.company}`);
+      logActivity(taskId, 'followup_created', `Follow-up scheduled for ${customer.company}`, {
+        customer_id: customer.id,
+        invoice_id: invoice.id,
+        days_from_now: daysFromNow,
+        type,
+      });
     }
 
     if (step7) markStep(taskId, step7.id, 'completed');
@@ -368,8 +436,11 @@ export async function runTask(task: Task): Promise<void> {
 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`[Orchestrator] Task ${taskId} failed:`, err);
-    taskStore.updateTaskStatus(taskId, 'failed');
-    logActivity(taskId, 'task_failed', `Task failed: ${message}`);
+    const isCancelErr = message.includes('was cancelled');
+    console.error(`[Orchestrator] Task ${taskId} ${isCancelErr ? 'cancelled' : 'failed'}:`, err);
+    taskStore.updateTaskStatus(taskId, isCancelErr ? 'cancelled' : 'failed');
+    logActivity(taskId, isCancelErr ? 'task_failed' : 'task_failed', `Task ${isCancelErr ? 'cancelled' : 'failed'}: ${message}`);
+  } finally {
+    cancelledTasks.delete(taskId);
   }
 }

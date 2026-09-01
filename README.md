@@ -103,7 +103,7 @@ Natural-language goal → Gemini reasoning → 8-step plan
 |-------|------------|
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | Backend | Node.js, Express, TypeScript |
-| AI Intelligence | Google Gemini 2.5 Flash via **Google ADK** (`@google/adk`) |
+| AI Intelligence | Google Gemini 3.6 Flash via **Google ADK** (`@google/adk`) |
 | Cloud Persistence | Google Cloud Firestore (`@google-cloud/firestore`) |
 | In-memory State | TypeScript `Map`-based stores with Firestore dual-write |
 | Type Safety | Shared `@docsetuai/types` workspace package |
@@ -190,7 +190,7 @@ No Google account required.
 |----------|---------|-------------|
 | `RUNTIME_MODE` | `demo` | `demo` = offline mode; `cloud` = Gemini + Firestore |
 | `GOOGLE_API_KEY` | — | Gemini API key (get from [Google AI Studio](https://aistudio.google.com)) |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model name |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini model name |
 | `GOOGLE_CLOUD_PROJECT` | — | GCP project ID for Firestore |
 | `FIRESTORE_DATABASE` | `(default)` | Firestore database name |
 | `PORT` | `4000` | API server port |

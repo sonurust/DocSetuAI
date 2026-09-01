@@ -43,7 +43,7 @@ flowchart TD
     end
 
     subgraph Google_AI["Google Cloud Intelligence"]
-        Gemini["Gemini 2.5 Flash / Pro"]
+        Gemini["Gemini 3.6 Flash"]
     end
 
     subgraph Persistence["State & Messaging"]

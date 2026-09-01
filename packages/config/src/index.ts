@@ -22,7 +22,7 @@ export const config: AppConfig = {
   port: parseInt(getEnv('PORT', '4000'), 10),
   node_env: getEnv('NODE_ENV', 'development'),
   google_api_key: getEnv('GOOGLE_API_KEY'),
-  gemini_model: getEnv('GEMINI_MODEL', 'gemini-3.6-flash'),
+  gemini_model: getEnv('GEMINI_MODEL', 'gemini-3.6-flash'),  // default: gemini-3.6-flash
   google_cloud_project: getEnv('GOOGLE_CLOUD_PROJECT'),
   google_cloud_location: getEnv('GOOGLE_CLOUD_LOCATION', 'us-central1'),
   firestore_database: getEnv('FIRESTORE_DATABASE', '(default)'),
