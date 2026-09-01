@@ -7,6 +7,7 @@ jobs:
   deploy-aws:
     name: Build & Push ECR -> App Runner
     runs-on: ubuntu-latest
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     steps:
       - name: Checkout repository
@@ -14,7 +15,6 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
-        if: env.AWS_ACCESS_KEY_ID != ''
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

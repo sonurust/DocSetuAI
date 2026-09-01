@@ -9,14 +9,12 @@ on:
       - 'packages/**'
       - 'agents/**'
       - 'Dockerfile'
-      - 'infrastructure/google-cloud/**'
-      - 'firestore.rules'
-      - 'firestore.indexes.json'
 
 jobs:
   deploy-gcp:
     name: Build & Deploy Cloud Run
     runs-on: ubuntu-latest
+    if: ${{ secrets.GCP_SA_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -24,7 +22,6 @@ jobs:
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
-        if: env.GCP_SA_KEY != ''
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
