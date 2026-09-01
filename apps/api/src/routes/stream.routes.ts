@@ -42,6 +42,31 @@ export function broadcastTaskUpdate(taskId: string, event: string, data: unknown
   });
 }
 
+// ── Auto-subscribe to taskStore EventEmitter events ─────────────────────────
+taskStore.on('task_update', ({ taskId, task }) => {
+  broadcastTaskUpdate(taskId, 'task_update', {
+    task,
+    executions: taskStore.getExecutions(taskId),
+    approvals: taskStore.getApprovalsByTask(taskId),
+    activities: taskStore.getActivitiesByTask(taskId),
+  });
+  if (['completed', 'failed', 'cancelled'].includes(task.status)) {
+    broadcastTaskUpdate(taskId, 'complete', { status: task.status });
+  }
+});
+
+taskStore.on('execution_update', ({ taskId, execution, executions }) => {
+  broadcastTaskUpdate(taskId, 'execution_update', { execution, executions });
+});
+
+taskStore.on('approval_update', ({ taskId, approval, approvals }) => {
+  broadcastTaskUpdate(taskId, 'approval_update', { approval, approvals });
+});
+
+taskStore.on('activity', ({ taskId, activity, activities }) => {
+  broadcastTaskUpdate(taskId, 'activity', { activity, activities });
+});
+
 // GET /api/tasks/:id/stream
 streamRouter.get(
   '/:id/stream',

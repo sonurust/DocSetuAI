@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { v4 as uuid } from 'uuid';
 import { firestoreRepo } from './firestore.repository';
 import type {
@@ -11,7 +12,7 @@ import type {
   PlanStep,
 } from '@docsetuai/types';
 
-class TaskStore {
+class TaskStore extends EventEmitter {
   private tasks: Map<string, Task> = new Map();
   private executions: Map<string, AgentExecution[]> = new Map();
   private approvals: Map<string, Approval> = new Map();
@@ -30,6 +31,7 @@ class TaskStore {
     this.tasks.set(task.id, task);
     this.executions.set(task.id, []);
     firestoreRepo.saveTask(task).catch(() => {});
+    this.emit('task_update', { taskId: task.id, task });
     return task;
   }
 
@@ -56,6 +58,7 @@ class TaskStore {
     };
     this.tasks.set(id, updated);
     firestoreRepo.saveTask(updated).catch(() => {});
+    this.emit('task_update', { taskId: id, task: updated });
     return updated;
   }
 
@@ -65,6 +68,7 @@ class TaskStore {
       const updated = { ...task, plan };
       this.tasks.set(id, updated);
       firestoreRepo.saveTask(updated).catch(() => {});
+      this.emit('task_update', { taskId: id, task: updated });
     }
   }
 
@@ -75,6 +79,7 @@ class TaskStore {
     const updated = { ...task, plan };
     this.tasks.set(taskId, updated);
     firestoreRepo.saveTask(updated).catch(() => {});
+    this.emit('task_update', { taskId, task: updated });
   }
 
   setTaskResult(id: string, result: TaskResult): void {
@@ -83,6 +88,7 @@ class TaskStore {
       const updated = { ...task, result };
       this.tasks.set(id, updated);
       firestoreRepo.saveTask(updated).catch(() => {});
+      this.emit('task_update', { taskId: id, task: updated });
     }
   }
 
@@ -92,6 +98,7 @@ class TaskStore {
     const list = this.executions.get(taskId) ?? [];
     list.push(exec);
     this.executions.set(taskId, list);
+    this.emit('execution_update', { taskId, execution: exec, executions: list });
   }
 
   getExecutions(taskId: string): AgentExecution[] {
@@ -106,6 +113,7 @@ class TaskStore {
       list[idx] = { ...current, ...patch };
     }
     this.executions.set(taskId, list);
+    this.emit('execution_update', { taskId, execution: list[idx], executions: list });
   }
 
   // ── Approvals ─────────────────────────────────────────────────────────────
@@ -113,6 +121,11 @@ class TaskStore {
   addApproval(approval: Approval): void {
     this.approvals.set(approval.id, approval);
     firestoreRepo.saveApproval(approval).catch(() => {});
+    this.emit('approval_update', {
+      taskId: approval.task_id,
+      approval,
+      approvals: this.getApprovalsByTask(approval.task_id),
+    });
   }
 
   getApproval(id: string): Approval | undefined {
@@ -150,6 +163,11 @@ class TaskStore {
     };
     this.approvals.set(id, updated);
     firestoreRepo.saveApproval(updated).catch(() => {});
+    this.emit('approval_update', {
+      taskId: updated.task_id,
+      approval: updated,
+      approvals: this.getApprovalsByTask(updated.task_id),
+    });
     return updated;
   }
 
@@ -159,6 +177,13 @@ class TaskStore {
     this.activities.unshift(activity);
     if (this.activities.length > 500) this.activities.splice(500);
     firestoreRepo.logActivity(activity).catch(() => {});
+    if (activity.task_id) {
+      this.emit('activity', {
+        taskId: activity.task_id,
+        activity,
+        activities: this.getActivitiesByTask(activity.task_id),
+      });
+    }
   }
 
   getAllActivities(limit = 100): Activity[] {

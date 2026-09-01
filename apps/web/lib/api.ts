@@ -85,4 +85,78 @@ export const api = {
 
   // Health
   health: () => request<{ status: string; runtime_mode: string }>('/health'),
+
+  // Real-time SSE Stream
+  subscribeToTaskStream: (
+    taskId: string,
+    callbacks: {
+      onConnected?: (data: TaskDetailResponse['data']) => void;
+      onTaskUpdate?: (data: TaskDetailResponse['data']) => void;
+      onExecutionUpdate?: (data: { execution: import('@docsetuai/types').AgentExecution; executions: import('@docsetuai/types').AgentExecution[] }) => void;
+      onApprovalUpdate?: (data: { approval: Approval; approvals: Approval[] }) => void;
+      onActivity?: (data: { activity: Activity; activities: Activity[] }) => void;
+      onComplete?: (data: { status: string }) => void;
+      onError?: (err: Event) => void;
+    },
+  ): () => void => {
+    const es = new EventSource(`${BASE_URL}/api/tasks/${taskId}/stream`);
+
+    if (callbacks.onConnected) {
+      es.addEventListener('connected', (e) => {
+        try {
+          callbacks.onConnected?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onTaskUpdate) {
+      es.addEventListener('task_update', (e) => {
+        try {
+          callbacks.onTaskUpdate?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onExecutionUpdate) {
+      es.addEventListener('execution_update', (e) => {
+        try {
+          callbacks.onExecutionUpdate?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onApprovalUpdate) {
+      es.addEventListener('approval_update', (e) => {
+        try {
+          callbacks.onApprovalUpdate?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onActivity) {
+      es.addEventListener('activity', (e) => {
+        try {
+          callbacks.onActivity?.(JSON.parse(e.data));
+        } catch {}
+      });
+    }
+
+    if (callbacks.onComplete) {
+      es.addEventListener('complete', (e) => {
+        try {
+          callbacks.onComplete?.(JSON.parse(e.data));
+        } catch {}
+        es.close();
+      });
+    }
+
+    if (callbacks.onError) {
+      es.onerror = callbacks.onError;
+    }
+
+    // Return cleanup function
+    return () => {
+      es.close();
+    };
+  },
 };

@@ -56,7 +56,31 @@ export default function TaskDetailPage() {
   useEffect(() => {
     fetchDetails();
 
-    // Auto-poll while running, planning, or awaiting approval
+    // ── Real-time SSE Stream subscription ───────────────────────────────────
+    const unsubscribe = api.subscribeToTaskStream(taskId, {
+      onConnected: (snapshot) => {
+        setData(snapshot);
+        setLoading(false);
+      },
+      onTaskUpdate: (updated) => {
+        setData(updated);
+      },
+      onExecutionUpdate: ({ executions }) => {
+        setData((prev) => (prev ? { ...prev, executions } : prev));
+      },
+      onApprovalUpdate: ({ approvals }) => {
+        setData((prev) => (prev ? { ...prev, approvals } : prev));
+      },
+      onActivity: ({ activities }) => {
+        setData((prev) => (prev ? { ...prev, activities } : prev));
+      },
+      onError: () => {
+        // SSE error/reconnect fallback: fetch manually
+        fetchDetails();
+      },
+    });
+
+    // Fallback polling (3s) while task is active, in case SSE disconnects
     const interval = setInterval(() => {
       if (
         data?.task.status === 'planning' ||
@@ -66,10 +90,13 @@ export default function TaskDetailPage() {
       ) {
         fetchDetails();
       }
-    }, 1500);
+    }, 3000);
 
-    return () => clearInterval(interval);
-  }, [fetchDetails, data?.task.status]);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [fetchDetails, taskId, data?.task.status]);
 
   const handleApprove = async (approvalId: string) => {
     setActionLoading(true);
