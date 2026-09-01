@@ -222,6 +222,16 @@ docker-compose up --build
 
 ---
 
+## 🖼️ Screenshots & Architecture
+
+<div align="center">
+  <img src="art/preview.png" alt="DocSetuAI Dashboard Preview" width="800px" style="border-radius: 8px; margin-bottom: 20px;" />
+  <br/><br/>
+  <img src="art/architecture.png" alt="DocSetuAI System Architecture" width="800px" style="border-radius: 8px;" />
+</div>
+
+---
+
 ## 📄 Documentation
 
 | Document | Description |
@@ -229,7 +239,7 @@ docker-compose up --build
 | [docs/architecture.md](docs/architecture.md) | System architecture + Mermaid diagrams |
 | [docs/api-reference.md](docs/api-reference.md) | Full REST API contract |
 | [docs/demo-script.md](docs/demo-script.md) | 3–4 min demo video script |
-| [docs/deployment.md](docs/deployment.md) | Local, Docker, Cloud Run deploy guide |
+| [docs/deployment.md](docs/deployment.md) | Local, Docker, Cloud Run & AWS deploy guide |
 | [docs/hackathon-submission.md](docs/hackathon-submission.md) | Hackathon submission documentation |
 | [docs/test-scenarios.md](docs/test-scenarios.md) | QA test scenarios |
 
@@ -240,6 +250,7 @@ docker-compose up --build
 - No secrets in Git — `.env` is gitignored
 - All secrets via environment variables
 - Server-side only API keys (Gemini, Firestore)
+- Constant-time API key verification & configurable rate limiting
 - Input validation via `zod` on all POST endpoints
 - Safe error messages (no stack traces exposed to clients)
 - Human-in-the-loop gate for all customer-facing actions
@@ -248,15 +259,26 @@ docker-compose up --build
 
 ## 📈 Future Roadmap
 
-- [ ] Pub/Sub async task dispatch (decouple orchestrator from HTTP request)
-- [ ] Server-Sent Events for real-time frontend updates without polling
-- [ ] Auth middleware (JWT / API key)
+- [x] Multi-Cloud Deployment (Google Cloud Run + AWS App Runner + Vercel)
+- [x] Firestore security rules & 20 composite indexes
+- [x] Pub/Sub async task dispatch & worker
+- [x] Server-Sent Events (SSE) for real-time frontend streaming
+- [x] Rate limiting with IP protection and unthrottled GET polling
 - [ ] Real email dispatch (SendGrid / AWS SES integration)
 - [ ] SMS and WhatsApp channels (Twilio)
 - [ ] Customer memory used in message generation (prior interaction context)
 - [ ] Agent cancellation with `AbortController`
-- [ ] Cloud Run infrastructure configs (`service.yaml`, `cloudbuild.yaml`)
-- [ ] Playwright E2E tests for approval flow
+
+---
+
+## 👨‍💻 Author & Contact
+
+**Sonu Kumar**
+- 📞 **Phone:** [+91 9810659036](tel:+919810659036)
+- 💬 **WhatsApp:** [Chat on WhatsApp (+919810659036)](https://wa.me/919810659036)
+- 📸 **Instagram:** [@skbhati1992](https://instagram.com/skbhati1992)
+- 👤 **Facebook:** [@skbhati199](https://facebook.com/skbhati199)
+- 🌐 **GitHub:** [@sonurust](https://github.com/sonurust)
 
 ---
 
@@ -264,4 +286,3 @@ docker-compose up --build
 
 MIT — see [LICENSE](LICENSE)
 
-**Author:** @skbhati1992 (Instagram) · @skbhati199 (Facebook, Discord)
