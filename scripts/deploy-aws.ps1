@@ -44,8 +44,20 @@ if (-not $SkipTests) {
     Write-Host "`n[2/5] Skipping tests (-SkipTests requested)." -ForegroundColor Yellow
 }
 
-# 3. AWS ECR Login & Repository Setup
-Write-Host "`n[3/5] Authenticating with AWS ECR ($AwsRegion)..." -ForegroundColor Green
+# 3. AWS Credentials & ECR Login
+Write-Host "`n[3/5] Checking AWS credentials and authenticating with ECR ($AwsRegion)..." -ForegroundColor Green
+$callerIdentity = aws sts get-caller-identity 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $callerIdentity) {
+    Write-Host "`n⚠️  Unable to locate active AWS credentials." -ForegroundColor Yellow
+    Write-Host "To configure AWS access, please run one of the following:" -ForegroundColor Yellow
+    Write-Host "  Option A (Interactive): aws configure" -ForegroundColor White
+    Write-Host "  Option B (Environment):" -ForegroundColor White
+    Write-Host "     `$env:AWS_ACCESS_KEY_ID     = 'your_access_key_id'" -ForegroundColor White
+    Write-Host "     `$env:AWS_SECRET_ACCESS_KEY = 'your_secret_access_key'" -ForegroundColor White
+    Write-Host "     `$env:AWS_DEFAULT_REGION    = '$AwsRegion'" -ForegroundColor White
+    throw "AWS authentication credentials required. Please configure AWS credentials and re-run."
+}
+
 $ecrRegistry = "$AccountId.dkr.ecr.$AwsRegion.amazonaws.com"
 aws ecr get-login-password --region $AwsRegion | docker login --username AWS --password-stdin $ecrRegistry
 if ($LASTEXITCODE -ne 0) { throw "AWS ECR authentication failed." }

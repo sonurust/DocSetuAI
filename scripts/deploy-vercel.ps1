@@ -33,8 +33,8 @@ pnpm --filter @docsetuai/web typecheck
 if ($LASTEXITCODE -ne 0) { throw "Web typecheck failed." }
 
 # 3. Deploy to Vercel
-Write-Host "`n[3/3] Deploying to Vercel..." -ForegroundColor Green
-$vercelArgs = @("--yes")
+Write-Host "`n[3/3] Deploying to Vercel (Project: docsetuai)..." -ForegroundColor Green
+$vercelArgs = @("--name", "docsetuai", "--yes")
 if ($Prod) {
     $vercelArgs += "--prod"
 }

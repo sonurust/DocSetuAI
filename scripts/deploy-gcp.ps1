@@ -42,6 +42,16 @@ if (-not $SkipTests) {
     Write-Host "`n[2/6] Skipping tests (-SkipTests requested)." -ForegroundColor Yellow
 }
 
+# Check active Google Cloud authentication
+$activeAccount = gcloud auth list --filter="status:ACTIVE" --format="value(account)" 2>$null
+if (-not $activeAccount) {
+    Write-Host "`n⚠️  No active Google Cloud login detected." -ForegroundColor Yellow
+    Write-Host "Please authenticate with Google Cloud:" -ForegroundColor Yellow
+    Write-Host "  Run: gcloud auth login" -ForegroundColor White
+    throw "Google Cloud authentication required. Please run 'gcloud auth login' and retry."
+}
+Write-Host "  ✓ Authenticated as: $activeAccount" -ForegroundColor DarkGreen
+
 # 3. Google Cloud APIs
 Write-Host "`n[3/6] Ensuring Google Cloud APIs are enabled on $ProjectId..." -ForegroundColor Green
 gcloud services enable `
